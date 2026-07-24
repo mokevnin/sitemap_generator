@@ -219,7 +219,7 @@ RSpec.describe 'SitemapGenerator' do
       ActionController::Base.default_url_options = @original_default_url_options
     end
 
-    it 'URL helpers respect ActionController::Base.default_url_options' do
+    it 'is applied when generating links via url helpers' do
       SitemapGenerator::Sitemap.create(default_host: 'http://test.local') do
         add contents_path
       end
@@ -230,7 +230,6 @@ RSpec.describe 'SitemapGenerator' do
       end
     end
   end
-
 
   describe 'external dependencies' do
     describe 'rails' do
