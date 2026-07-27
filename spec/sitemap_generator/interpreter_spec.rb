@@ -9,7 +9,7 @@ RSpec.describe SitemapGenerator::Interpreter do
   let(:link_set)    { SitemapGenerator::LinkSet.new }
   let(:interpreter) { described_class.new(link_set: link_set) }
 
-  before :all do
+  before do
     SitemapGenerator::Sitemap.reset!
     clean_sitemap_files_from_rails_app
     copy_sitemap_file_to_rails_app(:create)
@@ -18,17 +18,17 @@ RSpec.describe SitemapGenerator::Interpreter do
 
   # The interpreter doesn't have the URL helpers included for some reason, so it
   # fails when adding links.  That messes up later specs unless we reset the sitemap object.
-  after :all do
+  after do
     SitemapGenerator::Sitemap.reset!
     delete_sitemap_file_from_rails_app
   end
 
   it "finds the config file if Rails.root doesn't end in a slash" do
-    stub_const('Rails', double('Rails', root: SitemapGenerator.app.root.to_s.sub(%r{/$}, '')))
+    stub_const('Rails', class_double(Rails, root: SitemapGenerator.app.root.to_s.sub(%r{/$}, '')))
     expect { described_class.run }.not_to raise_error
   end
 
-  it 'sets the verbose option' do
+  it 'sets the verbose option', :aggregate_failures do
     allow(described_class).to receive(:new).and_wrap_original do |original_new, *args|
       original_new.call(*args).tap { |instance| expect(instance).to receive(:instance_eval) }
     end
@@ -84,25 +84,29 @@ RSpec.describe SitemapGenerator::Interpreter do
       end
     end
 
-    context 'when ActionController::Base is defined' do
+    context 'when ActionController::Base is defined and default_url_options has values' do
       let(:base_class) { double('ActionController::Base') }
 
-      before { stub_const('ActionController::Base', base_class) }
-
-      context 'when default_url_options has values' do
-        before { allow(base_class).to receive(:default_url_options).and_return({ trailing_slash: true }) }
-
-        it 'returns the configured options' do
-          expect(interpreter.default_url_options).to eq({ trailing_slash: true })
-        end
+      before do
+        stub_const('ActionController::Base', base_class)
+        allow(base_class).to receive(:default_url_options).and_return({ trailing_slash: true })
       end
 
-      context 'when default_url_options returns nil' do
-        before { allow(base_class).to receive(:default_url_options).and_return(nil) }
+      it 'returns the configured options' do
+        expect(interpreter.default_url_options).to eq({ trailing_slash: true })
+      end
+    end
 
-        it 'returns an empty hash' do
-          expect(interpreter.default_url_options).to eq({})
-        end
+    context 'when ActionController::Base is defined and default_url_options returns nil' do
+      let(:base_class) { double('ActionController::Base') }
+
+      before do
+        stub_const('ActionController::Base', base_class)
+        allow(base_class).to receive(:default_url_options).and_return(nil)
+      end
+
+      it 'returns an empty hash' do
+        expect(interpreter.default_url_options).to eq({})
       end
     end
   end
